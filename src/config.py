@@ -1,0 +1,6 @@
+PATH = 
+
+DATA_PATH = 
+MODEL_PATH = 
+
+MODEL_PARAMS = 
