@@ -1,8 +1,14 @@
 import argparse
 import config
+import torch
+import torch.nn as nn
+import torch.nn.functional as F
+from torch.utils.data import DataLoader
+from typing import Union, Callable
+from tqdm import tqdm
 
-from dev.models.inceptiontime import InceptionTime
 from dev.dataset import SpeechDataLoader
+from dev.models.inceptiontime import InceptionTime
 
 def get_argument_parser():
     """
@@ -24,7 +30,7 @@ def get_argument_parser():
         "--epochs",
         help="How many epochs you need to run (default: 10)",
         type=int,
-        default=10,
+        default=config.NO_EPOCHS,
     )
 
     parser.add_argument(
@@ -32,7 +38,7 @@ def get_argument_parser():
         "--batch_size",
         help="The number of images in a batch (default: 64)",
         type=int,
-        default=32,
+        default=config.BATCH_SIZE,
     )
 
     parser.add_argument(
@@ -40,13 +46,61 @@ def get_argument_parser():
         "--learning_rate",
         help="The learning rate used for optimizer (default: 1e-4)",
         type=float,
-        default=1e-4,
+        default=config.LEARNING_RATE,
     )
 
     args = parser.parse_args()
     return args
 
-def train(model, train_loader, val_loader):
-    
+def train(model: Callable, train_loader: DataLoader, val_loader: DataLoader, save = True):
+    optimizer = torch.optim.Adam(params = model.parameters(), lr = args.learning_rate)
+    scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, factor = 0.5, patience = 3)
+    criterion = nn.CrossEntropyLoss()
+    tk0 = tqdm(train_loader, len(train_loader))
+    model.to(config.DEVICE)
+    for epoch in range(args.epochs):
+        model.train()
+        epoch_loss = 0
+        for batch_idx, (inputs, targets) in enumerate(tk0):
+            optimizer.zero_grad()
+            outs = model(inputs.to(config.DEVICE))
+            loss = criterion(outs, targets.to(config.DEVICE))
+            epoch_loss += loss.item()
+            loss.backward()
+            optimizer.step()
+            
+        val_loss, val_acc = eval(model, val_loader, args)
+        print(f"Epoch {epoch + 1}: Train Loss = {epoch_loss/len(train_loader)}, Val Loss = {val_loss}, Val Accuracy = {val_acc}")
+        scheduler.step(val_loss)
+        
+    if save:
+        ckpt_path = str(config.MODEL_PATH / "model.pt")
+        model.save_state_dict(ckpt_path)
+                    
             
 def eval(model, val_loader):
+    model.eval()
+    val_loss = 0
+    tk0 = tqdm(val_loader, len(val_loader))
+    total_count = 0
+    correct_count = 0
+    with torch.no_grad():
+        for inputs, targets in tk0:
+            outs = model(inputs.to(config.DEVICE))
+            loss = nn.CrossEntropyLoss()(outs, targets.to(config.DEVICE))
+            val_loss += loss.item()
+            preds = torch.argmax(outs, dim = 1)
+            total_count += len(targets)
+            correct_count += (preds == targets).sum().item()
+    
+    return val_loss / len(val_loader), correct_count / total_count * 100
+    
+if __name__ == "__main__":
+    args = get_argument_parser()
+    data_manager = SpeechDataLoader()
+    trainloader, valloader = data_manager.train_loader(), data_manager.validation_loader()
+    model = InceptionTime(in_channels=,
+                          sequence_len=,
+                          num_classes= len(data_manager.num_classes))
+    train(model, )
+    

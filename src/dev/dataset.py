@@ -1,108 +1,95 @@
-from torch.utils.data import Dataset, DataLoader
+import torch
+import pickle
 from pathlib import Path
-import os
-import random
-import glob
-from typing import Optional, Callable, Union, Sequence
 
-from scipy import signal
-from scipy.fftpack import fft
-from scipy.io import wavfile
-from config import DATA_PATH
+from torch.utils.data import Dataset
+import librosa
+import numpy as np
+from typing import Optional, Callable, Sequence, Literal, List, Union
+import config
+
 
 class SpeechDataset(Dataset):
-    def __init__(self, data_paths: Sequence, targets: Sequence):
-        
-        self.data_paths = data_paths
-        self.targets = targets
-        
-        self.transforms = None
-        
-    def __len__(self):
-        return len(self.data_paths)
-        
-    def __getitem__(self, item):
-        sequence = wavfile.read(self.data_paths[item])
-        return sequence, self.targets[item]
-        # spec, time, freq = signal.spectrogram(sequence, )
-        # return sequence, freq, self.targets
-        
-class SpeechDataLoader(DataLoader):
     def __init__(
         self,
-        data_dir: Union[str, Path] = DATA_PATH,
-        batch_size: int = 32,
-    ):
+        # data_paths: Union[List, str],
+        data_path: Union[str, Path],
+        targets: Optional[Sequence] = None,
+        transform: Optional[Callable] = None,
+        fft_type: Literal["spectrogram", "mfcc"] = "mfcc",
+        sample_rate: int = config.SAMPLE_RATE,
+        padding_type : str = "linear_ramp",
+        augmentation: bool = False,
+        pitch_shift: int = 4,
+        time_stretch: float = 0.1,
+        random_shift: float = 0.2,
+        white_noise_factor: float = 0.005,
+        ):
         
-        self.labels = ['silence','yes', 'no', 'up', 'down', 'left', 'right', 'on', 'off', 'stop', 'go',
-                       'bed', 'bird', 'cat', 'dog', 'eight', 'five', 'four', 'happy', 'house', 'marvin',
-                       'nine', 'one', 'seven', 'sheila', 'six', 'three', 'tree', 'two', 'wow', 'zero']
+        self.targets = targets
+        # self.data_paths = data_paths
         
-        self.label2id = {}
-        self.id2label = {}
-        
-        for idx, label in enumerate(self.labels):
-            self.label2id[label] = idx
-            self.id2label[idx] = label
-        
-        self.num_classes = len(self.labels)   
+        with open(data_path, "rb") as f:
+            data = pickle.load(f)
+            if len(data) == 2:
+                self.images, self.targets = data[0], data[1]
             
-        self.batch_size = batch_size
-        if isinstance(data_dir, Path):
-            self.data_dir = str(data_dir)
-        else:
-            self.data_dir = data_dir
+        self.transforms = transform
+        self.sample_rate = sample_rate
+        self.padding_type = padding_type
+        self.fft_type = fft_type
         
-        with open(os.path.join(self.data_dir, "train", "validation_list.txt"), "r") as f:
-            self.val_paths = [file.rstrip() for file in f.readlines()]
-            self.val_targets = [self.label2id[path.split("/")[0]] 
-                                for path in self.val_paths]
+        self.augmentation = augmentation
+        self.pitch_shift = pitch_shift
+        self.time_stretch = time_stretch
+        self.white_noise_factor = white_noise_factor
+        self.random_shift = random_shift
         
-        with open(os.path.join(self.data_dir, "train", "testing_list.txt"), "r") as f:
-            self.test_paths = [file.rstrip() for file in f.readlines()]
-            self.test_targets = [self.label2id[path.split("/")[0]]
-                                 for path in self.test_paths]
+    def __len__(self):
+        return len(self.images)
     
-        self.train_paths = []
-        self.train_targets = []
-    
-        for label in self.labels[1:]:
-            filelist = os.listdir(os.path.join(self.data_dir, "train", "audio", label))
-            for file in filelist:
-                filepath = label + "/" + file
-                if filepath not in self.val_paths and filepath not in self.test_paths:
-                    self.train_paths.append(filepath)
-                    self.train_targets.append(self.label2id[label])
-        
-        print(len(self.train_targets))
-        print(len(self.val_targets))
-        print(len(self.test_targets))
+    def ff_transform(self, audio):
+        if self.fft_type == "spectrogram":
+            db = librosa.stft (y = audio, n_fft = config.FFT_WINDOW, 
+                               hop_length=config.FFT_OVERLAP, center = False)
+            S = librosa.amplitude_to_db (db, ref = np.max)
 
-    def setup(self):
-        self.train_dataset = SpeechDataset()
-        self.val_dataset = SpeechDataset()
-        self.test_dataset = SpeechDataset()
-        self.inference_dataset = SpeechDataset()
+        elif self.fft_type == "mfcc":
+            power = librosa.feature.melspectrogram (y = audio, sr = self.sample_rate,
+                                                    n_fft = config.FFT_WINDOW, hop_length = config.FFT_OVERLAP, n_mels = config.MEL_CHANNELS)
+            S = librosa.power_to_db (power, ref = np.max)
+            
+        return S
         
-    def setup_silence(self):
-        self.silence = None
+    def __getitem__(self, item):
+        audio = self.images[item]
         
-    def train_loader(self):
-        return DataLoader(self.train_dataset, batch_size = self.batch_size,
-                          shuffle = True, drop_last = True)
+        if self.augmentation:
+            step = self.pitch_shift * np.random.uniform()
+            speed_change = np.random.uniform(low=1-self.time_stretch, high=1+self.time_stretch)
+            
+            audio = librosa.effects.pitch_shift(y = audio, sr = config.SAMPLE_RATE, n_steps = step)
+            audio = librosa.effects.time_stretch(y = audio, rate = speed_change)
+            
+            start_idx = int(np.random.uniform(-len(audio) * self.random_shift,
+                                              len(audio) * self.random_shift))
+            
+            if start_idx >= 0:
+                audio = np.r_[audio[start_idx:], np.random.uniform(-0.001,0.001, start_idx)]
+            else:
+                audio = np.r_[np.random.uniform(-0.001,0.001, -start_idx), audio[:start_idx]]
+            
+            white_noise = np.random.randn(len(audio))
+            audio += white_noise * self.white_noise_factor
         
-    def validation_loader(self):
-        return DataLoader(self.val_dataset, batch_size = self.batch_size,
-                          shuffle = False, drop_last = False)
-
-    def test_loader(self):
-        return DataLoader(self.test_dataset, batch_size = self.batch_size,
-                          shuffle = False, drop_last = False)
+        if len(audio) < self.sample_rate:
+            audio = np.pad(audio, (0, 16000-len(audio)), self.padding_type)
         
-    def predict_loader(self):
-        return DataLoader(self.inference_dataset, batch_size = self.batch_size,
-                          shuffle = False, drop_last = False)
-    
-if __name__ == "__main__":
-    dataloader =  SpeechDataLoader()
+        audio = audio[:self.sample_rate]
+        
+        ## Convert 1D data into 2D data
+        S = self.ff_transform(audio)
+            
+        return (torch.tensor(S), self.targets[item]) if self.targets else torch.tensor(S)
+        
     
