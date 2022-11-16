@@ -1,8 +1,7 @@
-import torch
 from torch.utils.data import DataLoader
 from torchvision import transforms
 from pathlib import Path
-from datetime import datetime
+import pickle
 import os
 import config
 from typing import Optional, Callable, Union, Literal
@@ -17,22 +16,19 @@ class SpeechDataLoader(DataLoader):
         fft_type: Literal["spectrogram", "mfcc"] = "mfcc",
         sample_rate: int = config.SAMPLE_RATE,
         padding_type : str = "linear_ramp",
-        load_npy: Optional[str] = None,
+        padding_length: int = config.PADDING_LENGTH,
+        fft_window: int = config.FFT_WINDOW,
+        fft_overlap: int = config.FFT_OVERLAP,
+        mel_channels: int = config.MEL_CHANNELS,
+        load_pickle: bool = True,
     ):
-        
-        self.labels = ['silence','yes', 'no', 'up', 'down', 'left', 'right', 'on', 'off', 'stop', 'go',
-                       'bed', 'bird', 'cat', 'dog', 'eight', 'five', 'four', 'happy', 'house', 'marvin',
-                       'nine', 'one', 'seven', 'sheila', 'six', 'three', 'tree', 'two', 'wow', 'zero']
-        
-        self.label2id = {}
-        self.id2label = {}
-        
-        for idx, label in enumerate(self.labels):
-            self.label2id[label] = idx
-            self.id2label[idx] = label
+
+        self.labels = config.LABELS
+        self.label2id = config.LABEL2ID
+        self.id2label = config.ID2LABEL
         
         self.num_classes = len(self.labels)   
-            
+        self.load_pickle = load_pickle    
         self.batch_size = batch_size
         
         if isinstance(data_dir, Path):
@@ -40,32 +36,62 @@ class SpeechDataLoader(DataLoader):
         else:
             self.data_dir = data_dir
         
-        with open(os.path.join(self.data_dir, "train", "validation_list.txt"), "r") as f:
-            self.val_paths = [file.rstrip() for file in f.readlines()]
-            self.val_targets = [self.label2id[path.split("/")[0]] 
-                                for path in self.val_paths]
+        if self.load_pickle:
+            ### Load Pre-Loaded full dataset
+            self.data_dir = os.path.join(data_dir, "pickle")
+            print(f"Loading Pickle data files from {self.data_dir}")
+            
+            ### Load pickle data ### 
+            with open(os.path.join(data_dir, "pickle", "train.pkl"), "rb") as f:
+                self.train_images, self.train_targets = pickle.load(f)
+            with open(os.path.join(data_dir, "pickle", "validation.pkl"), "rb") as f:
+                self.val_images, self.val_targets = pickle.load(f)
+            with open(os.path.join(data_dir, "pickle", "test.pkl"), "rb") as f:
+                self.test_images, self.test_targets = pickle.load(f)
+            with open(os.path.join(data_dir, "pickle", "predict.pkl"), "rb") as f:
+                self.predict_images = pickle.load(f)
+            print("Finished Loading Pickle Data Files")
+
+            ### Convert labels to ids:
+            self.train_targets = [self.label2id[label] for label in self.train_targets]
+            self.val_targets = [self.label2id[label] for label in self.val_targets]
+            self.test_targets = [self.label2id[label] for label in self.test_targets]            
+
+        else:
+            ### Prepare paths to each wav files. Need to test for code runability.
+            with open(os.path.join(self.data_dir, "train", "validation_list.txt"), "r") as f:
+                self.val_images = [file.rstrip() for file in f.readlines()]
+                self.val_targets = [self.label2id[path.split("/")[0]] 
+                                    for path in self.val_images]
+                self.val_images = [os.path.join(data_dir, "train", "audio", path) for path in self.val_images]
+            with open(os.path.join(self.data_dir, "train", "testing_list.txt"), "r") as f:
+                self.test_images = [file.rstrip() for file in f.readlines()]
+                self.test_targets = [self.label2id[path.split("/")[0]]
+                                    for path in self.test_images]
+                self.test_images = [os.path.join(data_dir, "train", "audio", path) for path in self.test_images]
+
+            self.train_images = []
+            self.train_targets = []
+
+            for label in self.labels[1:]:
+                filelist = os.listdir(os.path.join(self.data_dir, "train", "audio", label))
+                for file in filelist:
+                    filepath = label + "/" + file
+                    if filepath not in self.val_images and filepath not in self.test_images:
+                        self.train_images.append(os.path.join(self.data_dir, "train", "audio", filepath))
+                        self.train_targets.append(self.label2id[label])
+            
+            self.predict_images = [os.path.join(data_dir, "test", "audio", path)
+                                   for path in os.listdir(os.path.join(data_dir, "test", "audio"))]
         
-        with open(os.path.join(self.data_dir, "train", "testing_list.txt"), "r") as f:
-            self.test_paths = [file.rstrip() for file in f.readlines()]
-            self.test_targets = [self.label2id[path.split("/")[0]]
-                                 for path in self.test_paths]
-    
-        self.train_paths = []
-        self.train_targets = []
-    
-        for label in self.labels[1:]:
-            filelist = os.listdir(os.path.join(self.data_dir, "train", "audio", label))
-            for file in filelist:
-                filepath = label + "/" + file
-                if filepath not in self.val_paths and filepath not in self.test_paths:
-                    self.train_paths.append(os.path.join(self.data_dir, "train", "audio", filepath))
-                    self.train_targets.append(self.label2id[label])
-        
-        self.predict_paths = [os.path.join(self.data_dir, "test", "audio")]
-        
+        ## FFT parameters
         self.sample_rate = sample_rate
         self.padding_type = padding_type
+        self.padding_length = padding_length
         self.fft_type = fft_type
+        self.fft_window = fft_window
+        self.fft_overlap = fft_overlap
+        self.mel_channels = mel_channels
         
         ## Augmentation
         
@@ -75,50 +101,70 @@ class SpeechDataLoader(DataLoader):
             self.transforms = transforms.Compose(
                 [
                     transforms.ToTensor(),
-                    transforms.Normalize(0.5, 0.5),
+                    transforms.Normalize(config.MEAN, config.STD),
                 ]
                 )
             
     def setup_silence(self):
         return
 
-    def setup(self, save = True):
+    def setup(self):
         self.train_dataset = SpeechDataset(
-            data_paths = self.train_paths,
+            data_images = self.train_images,
+            load_pickle = self.load_pickle,
             targets = self.train_targets,
             transform = self.transforms,
             fft_type = self.fft_type,
             sample_rate = self.sample_rate,
             padding_type = self.padding_type,
+            padding_length = self.padding_length,
+            fft_window = self.fft_window,
+            fft_overlap = self.fft_overlap,
+            mel_channels = self.mel_channels,
             augmentation = True,
             )
         
         self.val_dataset = SpeechDataset(
-            data_paths = self.val_paths,
+            data_images = self.val_images,
+            load_pickle = self.load_pickle,
             targets = self.val_targets,
             transform = self.transforms,
             fft_type = self.fft_type,
             sample_rate = self.sample_rate,
             padding_type = self.padding_type,
+            padding_length = self.padding_length,
+            fft_window = self.fft_window,
+            fft_overlap = self.fft_overlap,
+            mel_channels = self.mel_channels,
             augmentation = False,
         )
         
         self.test_dataset = SpeechDataset(
-            data_paths = self.test_paths,
+            data_images = self.test_images,
+            load_pickle = self.load_pickle,
             targets = self.test_targets,
             transform = self.transforms,
             fft_type = self.fft_type,
             sample_rate = self.sample_rate,
             padding_type = self.padding_type,
+            padding_length = self.padding_length,
+            fft_window = self.fft_window,
+            fft_overlap = self.fft_overlap,
+            mel_channels = self.mel_channels,
             augmentation = False,
         )
         
         self.inference_dataset = SpeechDataset(
-            data_paths = self.predict_paths,
+            data_images = self.predict_images,
+            load_pickle = self.load_pickle,
             transform = self.transforms,
             fft_type = self.fft_type,
             sample_rate = self.sample_rate,
             padding_type = self.padding_type,
+            padding_length = self.padding_length,
+            fft_window = self.fft_window,
+            fft_overlap = self.fft_overlap,
+            mel_channels = self.mel_channels,
             augmentation = False,
         )
         
@@ -137,24 +183,15 @@ class SpeechDataLoader(DataLoader):
     def predict_loader(self):
         return DataLoader(self.inference_dataset, batch_size = self.batch_size,
                           shuffle = False, drop_last = False, num_workers=config.NUM_WORKERS)
-        
+
 if __name__ == "__main__":
-    start_time = datetime.now()
-    dataloader =  SpeechDataLoader()
-    curr_time = datetime.now()
-    print("Speech Loader Time:", curr_time - start_time)
-    start_time = curr_time
+    dataloader = SpeechDataLoader()
     dataloader.setup()
-    curr_time = datetime.now()
-    print("Setup Time:", curr_time - start_time)
-    start_time = curr_time
     train_loader = dataloader.train_loader()
-    curr_time = datetime.now()
-    print("Trainloader Time:", curr_time - start_time)
-    start_time = curr_time
-    for inputs, targets in train_loader:
-        inputs, targets = next(iter(train_loader))
-        curr_time = datetime.now()
-        print("Time elapsed:", curr_time - start_time)
-        start_time = curr_time
+    val_loader = dataloader.validation_loader()
+    test_loader = dataloader.test_loader()
+    predict_loader = dataloader.predict_loader()
+    
+    inputs, targets = next(iter(train_loader))
     print(inputs.size(), len(targets))
+    
