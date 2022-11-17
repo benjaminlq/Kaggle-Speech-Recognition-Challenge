@@ -1,9 +1,0 @@
-## To do list
-A. DATA LOADING & PREPROCESSING
-1. Split Silence Files -> Put Silence Files into Train folders
-
-2. Data Augmentation
-a/ Calculate Data Distribution -> For Normalization
-b/ Flip Sequence (np.flipud)
-
-3. Consider read data once and save .npy files to make data loading process faster
