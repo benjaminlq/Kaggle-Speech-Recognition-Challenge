@@ -2,6 +2,7 @@ from torch.utils.data import DataLoader
 from torchvision import transforms
 from pathlib import Path
 import pickle
+import numpy as np
 import os
 import config
 from typing import Optional, Callable, Union, Literal
@@ -80,6 +81,24 @@ class SpeechDataLoader(DataLoader):
                     if filepath not in self.val_images and filepath not in self.test_images:
                         self.train_images.append(os.path.join(self.data_dir, "train", "audio", filepath))
                         self.train_targets.append(self.label2id[label])
+                        
+            ## Setup Silence 
+            silence_list = os.listdir(os.path.join(self.data_dir, "train", "audio", "silence"))
+            np.random.shuffle(silence_list)
+            silence_train_images = [os.path.join(self.data_dir, "train", "audio", "silence", silence_file)
+                                    for silence_file in silence_list[:2300]]
+            self.train_images += silence_train_images
+            self.train_targets += ["silence"] * len(silence_train_images)
+            
+            silence_val_images = [os.path.join(self.data_dir, "train", "audio", "silence", silence_file)
+                                    for silence_file in silence_list[2300:2550]]
+            self.val_images += silence_val_images
+            self.val_targets += ["silence"] * len(silence_val_images)
+            
+            silence_test_images = [os.path.join(self.data_dir, "train", "audio", "silence", silence_file)
+                                    for silence_file in silence_list[2550:]]
+            self.test_images += silence_test_images
+            self.test_targets += ["silence"] * len(silence_test_images)
             
             self.predict_images = [os.path.join(data_dir, "test", "audio", path)
                                    for path in os.listdir(os.path.join(data_dir, "test", "audio"))]
@@ -105,9 +124,6 @@ class SpeechDataLoader(DataLoader):
                 ]
                 )
             
-    def setup_silence(self):
-        return
-
     def setup(self):
         self.train_dataset = SpeechDataset(
             data_images = self.train_images,
