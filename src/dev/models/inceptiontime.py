@@ -112,6 +112,9 @@ class InceptionTime(nn.Module):
         x = self.flatten(x) ## (bs, num_filters * 4)
         out = self.linear(x) ## (bs, num_classes)
         return out
+    
+    def __str__(self):
+        return "inceptiontime"
                 
 if __name__ == "__main__":
     sample = torch.rand(3, 85, 120)

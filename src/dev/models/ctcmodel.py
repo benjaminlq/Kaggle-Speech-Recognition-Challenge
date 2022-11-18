@@ -43,6 +43,9 @@ class CTCModel(nn.Module):
         out = self.logsoftmax(x) 
         return out
     
+    def __str__(self):
+        return "ctcmodel"
+    
 if __name__ == "__main__":
     batch_size = 4
     vocab_size = 26
