@@ -27,13 +27,12 @@ def log_spectrograms(sample_data: np.array, sample_rate: int):
     plt.xlabel("Time")
     plt.ylabel("Frequency")
     plt.title("Spectrogram - y axis is frequency spectrum")
-    
-# def meltrogram(sample_data: np.array):
-#     x = librosa.stft(sample_data, )
 
 def mel_spectrogram(sample_data: np.array, sample_rate: int, noverlap: int):
     ## Sample data = size (time, feature_channels)
     librosa.display.specshow(y = sample_data, x_axis="mel", fmax=sample_rate,
                              y_axis="time", sr=sample_rate, hop_length=noverlap)
+    
+
     
     
