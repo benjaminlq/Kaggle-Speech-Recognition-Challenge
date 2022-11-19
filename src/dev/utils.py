@@ -1,11 +1,17 @@
 import matplotlib.pyplot as plt
 import numpy as np
-from typing import Union
-from config import FFT_OVERLAP, FFT_WINDOW, EPS, SAMPLE_RATE
+from config import FFT_OVERLAP, FFT_WINDOW, EPS, DEVICE
 import librosa
 from scipy import signal
-from pathlib import Path
-import pickle
+import torch
+
+def save_model(model, path):
+    torch.save(model.state_dict(), path)
+    print(f"Model saved successfully at {path}")
+
+def load_model(model, path):
+    model.load_state_dict(torch.load(path, map_location = DEVICE))
+    print(f"Model {str(model)} loaded successfully from {path}")
 
 def log_spectrograms(sample_data: np.array, sample_rate: int):
     
