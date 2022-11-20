@@ -38,11 +38,11 @@ class SpeechDataLoader(DataLoader):
             fft_type (Literal["spectrogram";, "mfcc"], optional): Method to use for Fourier Transform to generate feature for each timestamp. If "spectrogram",
             use Discrete Short Time Fourier Transform to convert time domain to frequency domain with feature size = FFT_WINDOW // 2 + 1. If "mfcc", use Mel Frequency
             cepstral coefficient to generate features of size = MEL_CHANNELS. Defaults to "mfcc".
-            sample_rate (int, optional): sample rate of sound files. Defaults to config.SAMPLE_RATE.
-            padding_type (str, optional): type of padding. Defaults to "linear_ramp".
+            sample_rate (int, optional): Sample rate of sound files. Defaults to config.SAMPLE_RATE.
+            padding_type (str, optional): Type of padding. Defaults to "linear_ramp".
             padding_length (int, optional): length of padded sequence. Defaults to config.PADDING_LENGTH.
-            fft_window (int, optional): window for FFT. Defaults to config.FFT_WINDOW.
-            fft_overlap (int, optional): window overlapping size for FFT. Defaults to config.FFT_OVERLAP.
+            fft_window (int, optional): Window for FFT. Defaults to config.FFT_WINDOW.
+            fft_overlap (int, optional): Window overlapping size for FFT. Defaults to config.FFT_OVERLAP.
             mel_channels (int, optional): No of MEL channels if "mfcc" is used for fft_type. Defaults to config.MEL_CHANNELS.
             load_pickle (bool, optional): If True, load data from pickle files. If False, DataLoader contains list of file paths to be read. Defaults to True.
         """
