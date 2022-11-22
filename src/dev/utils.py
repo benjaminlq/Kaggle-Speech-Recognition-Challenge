@@ -1,5 +1,7 @@
 """Utility Functions
 """
+import os
+import random
 from typing import Callable
 
 import librosa
@@ -88,3 +90,14 @@ def mel_spectrogram(sample_data: np.array, sample_rate: int, noverlap: int):
         sr=sample_rate,
         hop_length=noverlap,
     )
+
+
+def seed_everything(seed: int = 2023):
+    """Set seed for reproducability"""
+    random.seed(seed)
+    os.environ["PYTHONHASHSEED"] = str(seed)
+    np.random.seed(seed)
+    torch.manual_seed(seed)
+    torch.cuda.manual_seed(seed)
+    torch.backends.cudnn.deterministic = True
+    torch.backends.cudnn.benchmark = True
