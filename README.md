@@ -30,15 +30,36 @@ The following commands shall be ran **after activating the virtual environment**
 
 ## Methodology
 
-* To train model ` `
-
 ### Model Architecture
-#### Multiclass Classification 
+#### Multiclass Classification
+* RNN
 * Inception Time
 * U-Time
 
 #### Sequence Translation with CTCLoss
-* LSTM/RNN/GRU 
+* LSTM/RNN/GRU
 
 ## Results
-* To be updated
+
+|**Model**|**Macro Avg Accuracy (Val)**|**Macro Avg Accuracy (Test)**|
+| :-------------: | :-----------------------: | :---------------: |
+|RNN (Classification)|To be updated|To be updated|
+|InceptionTime (Classification)|89.28%|88.07%|
+|UTime (Classification)|To be updated|To be updated|
+|LSTM (CTCLoss)|To be updated|To be updated|
+
+## To do List
+1. Update Multi-Class micro-average accuracy instead of macro-average accuracy
+2. Kaggle inference: Only 12 classes (Convert some claasses to Unknown)
+3. MODELS
+
+   **Training Using CTCLoss**
+* How to setup output character dictionary
+* How to infer? Greedy Decode? Beam Search?
+* In cases where inference doesnt match, how to map close words to corresponding labels.
+
+  **Other RNN Models**
+* RNN
+* Utime
+
+4. Create API & Use API to infer Predict dataset
