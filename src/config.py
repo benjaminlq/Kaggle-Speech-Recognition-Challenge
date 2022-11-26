@@ -14,6 +14,7 @@ import torch
 
 from dev.models.ctcmodel import CTCModel
 from dev.models.inceptiontime import InceptionTime
+from dev.models.rnn import RNNModel
 
 ### Path ###
 MAIN_PATH = Path(__file__).resolve().parents[1]
@@ -114,6 +115,28 @@ MODEL_PARAMS = {
         "transform": "mfcc",
         "params": {"vocab_size": len(CHAR_LIST), "channels_no": MEL_CHANNELS},
         "type": "translation",
+    },
+    "RNN": {
+        "instance": RNNModel,
+        "transform": "mfcc",
+        "params": {
+            "in_channels": MEL_CHANNELS,
+            "sequence_len": SEQUENCE_LEN,
+            "num_classes": len(LABELS),
+            "self_attention": False,
+        },
+        "type": "classification",
+    },
+    "RNN_ATT": {
+        "instance": RNNModel,
+        "transform": "mfcc",
+        "params": {
+            "in_channels": MEL_CHANNELS,
+            "sequence_len": SEQUENCE_LEN,
+            "num_classes": len(LABELS),
+            "self_attention": True,
+        },
+        "type": "classification",
     },
 }
 
