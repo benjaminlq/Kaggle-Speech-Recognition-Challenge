@@ -7,10 +7,13 @@ from typing import Callable
 import librosa
 import matplotlib.pyplot as plt
 import numpy as np
+import pandas as pd
+import seaborn as sns
 import torch
 from scipy import signal
+from sklearn.metrics import classification_report, confusion_matrix
 
-from config import DEVICE, EPS, FFT_OVERLAP, FFT_WINDOW, LOGGER
+from config import DEVICE, EPS, FFT_OVERLAP, FFT_WINDOW, LABELS, LOGGER
 
 
 def save_model(model: Callable, path: str):
@@ -21,7 +24,7 @@ def save_model(model: Callable, path: str):
         path (str): Path to save ckpt
     """
     torch.save(model.state_dict(), path)
-    LOGGER.info(f"Model saved successfully at {path}")
+    LOGGER.info(f"Model {str(model)} saved successfully at {path}")
 
 
 def load_model(model: Callable, path: str):
@@ -101,3 +104,34 @@ def seed_everything(seed: int = 2023):
     torch.cuda.manual_seed(seed)
     torch.backends.cudnn.deterministic = True
     torch.backends.cudnn.benchmark = True
+
+
+def save_summary_statistic(y_true: list, y_preds: list, path: str):
+    """_summary_
+
+    Args:
+        y_true (list): _description_
+        y_preds (list): _description_
+        path (str): _description_
+    """
+    with open(os.path.join(path, "classification_report.txt"), "w") as f:
+        f.write(classification_report(y_true, y_preds))
+
+    cf_matrix = confusion_matrix(y_true, y_preds)
+    df_cm = pd.DataFrame(cf_matrix, index=LABELS, columns=LABELS)
+
+    plt.figure(figsize=(12, 8))
+    sns.heatmap(df_cm, annot=True, fmt="g")
+    plt.title("Confusion Matrix for 31 classes of words")
+    plt.xlabel("Predicted Class")
+    plt.ylabel("Actual Class")
+    plt.savefig(os.path.join(path, "Confusion Matrix.png"))
+
+
+def generate_pickle_data(sample_rate: int):
+    """_summary_
+
+    Args:
+        sample_rate (int): _description_
+    """
+    return
