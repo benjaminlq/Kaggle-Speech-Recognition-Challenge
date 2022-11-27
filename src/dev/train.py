@@ -75,6 +75,14 @@ def get_argument_parser():
         default=5,
     )
 
+    parser.add_argument(
+        "-db",
+        "--debug",
+        help="Whether to run train script in debug mode",
+        type=bool,
+        default=False,
+    )
+
     args = parser.parse_args()
     return args
 
@@ -88,6 +96,7 @@ if __name__ == "__main__":
     load_model = args.load
     early_stopping = args.earlystop
     patience = args.patience
+    debug = args.debug
 
     model = config.MODEL_PARAMS[model_type]["instance"](
         **config.MODEL_PARAMS[model_type]["params"]
@@ -110,6 +119,7 @@ if __name__ == "__main__":
             early_stopping=early_stopping,
             patience=patience,
             load=load_model,
+            debug=debug,
         )
     elif config.MODEL_PARAMS[model_type]["type"] == "translation":
         train_translation(
@@ -121,11 +131,14 @@ if __name__ == "__main__":
             early_stopping=early_stopping,
             patience=patience,
             load=load_model,
+            debug=debug,
         )
 
     # Evaluate result on test dataset
     test_loader = data_manager.test_loader()
-    test_loss, test_acc = eval_classification(model, test_loader)
-    LOGGER.info(f"Test Loss = {test_loss}, Test Accuracy = {test_acc}")
+    test_loss, test_acc, _, _ = eval_classification(model, test_loader)
+    LOGGER.info(
+        f"Model {str(model)} - Test Loss = {test_loss}, Test Accuracy = {test_acc}"
+    )
 
 ## python3 src/dev/train.py -e 1 -bs 128
