@@ -7,6 +7,12 @@ import torch.nn as nn
 
 
 class RNNModel(nn.Module):
+    """RNN Model
+
+    Args:
+        nn (_type_): _description_
+    """
+
     def __init__(
         self,
         in_channels: int,
@@ -14,9 +20,9 @@ class RNNModel(nn.Module):
         sequence_len: int,
         hidden_size: int = 64,
         num_layers: int = 2,
-        rnn_type: Literal["rnn", "lstm", "gru"] = "lstm",
+        rnn_type: Literal["RNN", "LSTM", "GRU"] = "LSTM",
         bidirectional: bool = True,
-        dropout: float = 0.25,
+        dropout: float = 0.0,
         self_attention: bool = False,
     ):
         """_summary_
@@ -27,7 +33,7 @@ class RNNModel(nn.Module):
             sequence_len (int): Number of output class labels
             hidden_size (int, optional): RNN hidden size to pass to next time step. Defaults to 64.
             num_layers (int, optional): Number of RNN layers. Defaults to 2.
-            rnn_type (str, "lstm", "rnn" or "gru"): Type of RNN architecture. Defaults to "lstm".
+            rnn_type (str, "LSTM", "RNN" or "GRU"): Type of RNN architecture. Defaults to "LSTM". Need to be UPPERCASE.
             bidirectional (bool, optional): Use bidirectional RNN. Defaults to True.
             dropout (float, optional): Dropout Rate. Defaults to 0.25.
             self_attention (bool, optional): Use self-attention. Defaults to False.
@@ -38,37 +44,48 @@ class RNNModel(nn.Module):
         self.bidirectional = bidirectional
         self.sequence_len = sequence_len
         self.self_attention = self_attention
+        self.rnn_type = rnn_type
+        rnn_obj = getattr(nn, rnn_type)
+        self.rnn = rnn_obj(
+            input_size=in_channels,
+            hidden_size=hidden_size,
+            num_layers=num_layers,
+            bias=False,
+            batch_first=True,
+            dropout=dropout,
+            bidirectional=bidirectional,
+        )
 
-        if rnn_type == "rnn":
-            self.rnn = nn.RNN(
-                input_size=in_channels,
-                hidden_size=hidden_size,
-                num_layers=num_layers,
-                bias=False,
-                batch_first=True,
-                dropout=dropout,
-                bidirectional=bidirectional,
-            )
-        elif rnn_type == "lstm":
-            self.rnn = nn.LSTM(
-                input_size=in_channels,
-                hidden_size=hidden_size,
-                num_layers=num_layers,
-                bias=False,
-                batch_first=True,
-                dropout=dropout,
-                bidirectional=bidirectional,
-            )
-        else:
-            self.rnn = nn.GRU(
-                input_size=in_channels,
-                hidden_size=hidden_size,
-                num_layers=num_layers,
-                bias=False,
-                batch_first=True,
-                dropout=dropout,
-                bidirectional=bidirectional,
-            )
+        # if rnn_type == "rnn":
+        #     self.rnn = nn.RNN(
+        #         input_size=in_channels,
+        #         hidden_size=hidden_size,
+        #         num_layers=num_layers,
+        #         bias=False,
+        #         batch_first=True,
+        #         dropout=dropout,
+        #         bidirectional=bidirectional,
+        #     )
+        # elif rnn_type == "lstm":
+        #     self.rnn = nn.LSTM(
+        #         input_size=in_channels,
+        #         hidden_size=hidden_size,
+        #         num_layers=num_layers,
+        #         bias=False,
+        #         batch_first=True,
+        #         dropout=dropout,
+        #         bidirectional=bidirectional,
+        #     )
+        # else:
+        #     self.rnn = nn.GRU(
+        #         input_size=in_channels,
+        #         hidden_size=hidden_size,
+        #         num_layers=num_layers,
+        #         bias=False,
+        #         batch_first=True,
+        #         dropout=dropout,
+        #         bidirectional=bidirectional,
+        #     )
 
         self.dropout = nn.Dropout(p=dropout)
         if self.bidirectional:
