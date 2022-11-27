@@ -39,6 +39,7 @@ BATCH_SIZE = 32
 LEARNING_RATE = 3e-4
 DEVICE = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
 NUM_WORKERS = os.cpu_count()
+CLIP = 1
 MEAN = 0.5
 STD = 0.5
 
