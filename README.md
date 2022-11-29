@@ -49,9 +49,8 @@ The following commands shall be ran **after activating the virtual environment**
 |LSTM (CTCLoss)|To be updated|To be updated|
 
 ## To do List
-1. Update Multi-Class macro F1-Score instead of micro-average accuracy (Done!!!)
-2. Kaggle inference: Only 12 classes (Convert some classes to Unknown)
-3. MODELS
+1. Kaggle inference: Only 12 classes (Convert some classes to Unknown)
+2. MODELS
 
    **Training Using CTCLoss**
 * How to setup output character dictionary
@@ -60,9 +59,10 @@ The following commands shall be ran **after activating the virtual environment**
 
   **Other RNN Models**
 * RNN
-- Add Self-Attention.
+- Add Self-Attention. (Done!!!)
 - Add Gradient Clipping. (Done!!!)
 
 * Utime
 
-4. Create API & Use API to infer Predict dataset
+3. Create API & Use API to infer Predict dataset
+4. Streamlit Inference
