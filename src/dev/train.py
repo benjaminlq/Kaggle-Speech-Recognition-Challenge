@@ -141,4 +141,4 @@ if __name__ == "__main__":
         f"Model {str(model)} - Test Loss = {test_loss}, Test Accuracy = {test_acc}"
     )
 
-## python3 src/dev/train.py -e 1 -bs 128
+## python3 src/dev/train.py -e 1 -bs 128 -md RNN_ATT
