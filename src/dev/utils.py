@@ -1,6 +1,7 @@
 """Utility Functions
 """
 import os
+import pickle
 import random
 from typing import Callable
 
@@ -13,7 +14,7 @@ import torch
 from scipy import signal
 from sklearn.metrics import classification_report, confusion_matrix
 
-from config import DEVICE, EPS, FFT_OVERLAP, FFT_WINDOW, LABELS, LOGGER
+from config import DATA_PATH, DEVICE, EPS, FFT_OVERLAP, FFT_WINDOW, LABELS, LOGGER
 
 
 def save_model(model: Callable, path: str):
@@ -107,12 +108,14 @@ def seed_everything(seed: int = 2023):
 
 
 def save_summary_statistic(y_true: list, y_preds: list, path: str):
-    """_summary_
+    """Generate Summary Statistics:
+    1. Classification Report containing Macro, Micro, Weighted Avg Precision, Recall, F1-Score
+    2. Confusion Matrix
 
     Args:
-        y_true (list): _description_
-        y_preds (list): _description_
-        path (str): _description_
+        y_true (list): List of ground-truth labels
+        y_preds (list): List of predicted labels
+        path (str): Directory to save model summary artifacts`
     """
     with open(os.path.join(path, "classification_report.txt"), "w") as f:
         f.write(classification_report(y_true, y_preds))
@@ -128,10 +131,74 @@ def save_summary_statistic(y_true: list, y_preds: list, path: str):
     plt.savefig(os.path.join(path, "Confusion Matrix.png"))
 
 
-def generate_pickle_data(sample_rate: int):
-    """_summary_
+def generate_pickle_data(sample_rate: int, out_path: str):
+    """Generate pickle datasets
+    1. Train Dataset
+    2. Validation & Test datasets
+    3. Inference dataset (No output labels)
 
     Args:
         sample_rate (int): _description_
     """
-    return
+
+    with open(os.path.join(str(DATA_PATH), "train", "validation_list.txt"), "r") as f:
+        val_paths = [file.rstrip() for file in f.readlines()]
+        val_targets = [path.split("/")[0] for path in val_paths]
+        val_paths = [
+            os.path.join(str(DATA_PATH), "train", "audio", path) for path in val_paths
+        ]
+
+    with open(os.path.join(str(DATA_PATH), "train", "testing_list.txt"), "r") as f:
+        test_paths = [file.rstrip() for file in f.readlines()]
+        test_targets = [path.split("/")[0] for path in test_paths]
+        test_paths = [
+            os.path.join(str(DATA_PATH), "train", "audio", path) for path in test_paths
+        ]
+
+    train_paths = []
+    train_targets = []
+
+    for label in LABELS[1:]:
+        filelist = os.listdir(os.path.join(str(DATA_PATH), "train", "audio", label))
+        for file in filelist:
+            filepath = label + "/" + file
+            if filepath not in val_paths and filepath not in test_paths:
+                train_paths.append(
+                    os.path.join(str(DATA_PATH), "train", "audio", filepath)
+                )
+                train_targets.append(label)
+
+    predict_paths = [
+        os.path.join(str(DATA_PATH), "test", "audio", path)
+        for path in os.listdir(os.path.join(str(DATA_PATH), "test", "audio"))
+    ]
+
+    print("Data Loaded successfully into memory")
+
+    x_val, x_test, x_train, x_predict = [], [], [], []
+
+    for path in val_paths:
+        audio, _ = librosa.load(path, sr=sample_rate)
+        x_val.append(audio)
+    with open(os.path.join(out_path, "validation.pkl"), "wb") as f:
+        pickle.dump((x_val, val_targets), f)
+
+    for path in test_paths:
+        audio, _ = librosa.load(path, sr=sample_rate)
+        x_test.append(audio)
+    with open(os.path.join(out_path, "test.pkl"), "wb") as f:
+        pickle.dump((x_test, test_targets), f)
+
+    for path in train_paths:
+        audio, _ = librosa.load(path, sr=sample_rate)
+        x_train.append(audio)
+    with open(os.path.join(out_path, "train.pkl"), "wb") as f:
+        pickle.dump((x_train, train_targets), f)
+
+    for path in predict_paths:
+        audio, _ = librosa.load(path, sr=sample_rate)
+        x_predict.append(audio)
+    with open(os.path.join(out_path, "predict.pkl"), "wb") as f:
+        pickle.dump(x_predict, f)
+
+    print("Data saved successfully to disk")
