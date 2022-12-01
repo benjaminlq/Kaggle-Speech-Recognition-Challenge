@@ -80,6 +80,20 @@ LABELS = [
     "zero",
 ]
 
+KAGGLE_LABELS = [
+    "yes",
+    "no",
+    "up",
+    "down",
+    "left",
+    "right",
+    "on",
+    "off",
+    "stop",
+    "go",
+    "silence",
+]
+
 ## For Classification Models
 LABEL2ID = {}
 ID2LABEL = {}
