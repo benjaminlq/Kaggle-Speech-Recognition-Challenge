@@ -9,6 +9,7 @@ import torch.nn.functional as F
 from torch.utils.data import Dataset
 
 import config
+from dev import utils
 
 
 class SpeechDataset(Dataset):
@@ -162,7 +163,15 @@ class SpeechDataset(Dataset):
         audio = audio[: self.padding_length]
 
         ## Convert 1D data into 2D data
-        S = self.ff_transform(audio)
+        # S = self.ff_transform(audio)
+        S = utils.ff_transform(
+            audio,
+            self.fft_type,
+            self.fft_window,
+            self.fft_overlap,
+            self.sample_rate,
+            self.mel_channels,
+        )
 
         if self.sequence_output:
             sequence = config.ID2SEQUENCE[self.targets[item]]
