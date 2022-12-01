@@ -7,6 +7,7 @@
 """
 import logging
 import os
+import string
 import sys
 from pathlib import Path
 
@@ -39,6 +40,7 @@ BATCH_SIZE = 32
 LEARNING_RATE = 3e-4
 DEVICE = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
 NUM_WORKERS = os.cpu_count()
+# NUM_WORKERS = 0
 CLIP = 1
 MEAN = 0.5
 STD = 0.5
@@ -78,6 +80,7 @@ LABELS = [
     "zero",
 ]
 
+## For Classification Models
 LABEL2ID = {}
 ID2LABEL = {}
 
@@ -85,19 +88,22 @@ for idx, label in enumerate(LABELS):
     LABEL2ID[label] = idx
     ID2LABEL[idx] = label
 
-all_chars = set()
-for label in LABELS[1:]:
-    for char in label:
-        all_chars.add(char)
+## For CTC Models
+CHAR_LIST = ["-", "|"] + list(string.ascii_lowercase)
+# CHAR_LIST = ["-"] + list(string.ascii_lowercase) + ["|"]
+CHAR2ID, ID2CHAR = {}, {}
 
-CHAR_LIST = list(all_chars)
-CHAR2ID = {"$": 0}
-ID2CHAR = {0: "$"}
+for idx, char in enumerate(CHAR_LIST):
+    CHAR2ID[char] = idx
+    ID2CHAR[idx] = char
 
-charid = 1
-for char in CHAR_LIST:
-    CHAR2ID[char] = charid
-    ID2CHAR[charid] = char
+LABELS_IDX_SEQ = [[CHAR2ID["|"]]] + [
+    [CHAR2ID["|"]] + [CHAR2ID[char] for char in label] + [CHAR2ID["|"]]
+    for label in LABELS[1:]
+]
+# LABELS_IDX_SEQ = [[CHAR2ID[""]]] + [[CHAR2ID[char] for char in label] for label in LABELS[1:]]
+ID2SEQUENCE = {idx: seq for idx, seq in enumerate(LABELS_IDX_SEQ)}
+CTC_MAX_OUT_LEN = max([len(seq) for seq in ID2SEQUENCE.values()])
 
 ### Model Definition
 MODEL_PARAMS = {
@@ -156,3 +162,7 @@ file_handler.setFormatter(formatter)
 LOGGER.setLevel(logging.INFO)
 LOGGER.addHandler(stream_handler)
 LOGGER.addHandler(file_handler)
+
+if __name__ == "__main__":
+    print(ID2SEQUENCE)
+    print(CTC_MAX_OUT_LEN)
