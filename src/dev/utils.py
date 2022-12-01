@@ -3,7 +3,7 @@
 import os
 import pickle
 import random
-from typing import Callable
+from typing import Callable, Literal
 
 import librosa
 import matplotlib.pyplot as plt
@@ -21,9 +21,12 @@ from config import (
     EPS,
     FFT_OVERLAP,
     FFT_WINDOW,
+    KAGGLE_LABELS,
     LABELS,
     LOGGER,
+    MEL_CHANNELS,
     MODEL_PATH,
+    SAMPLE_RATE,
 )
 
 
@@ -47,6 +50,40 @@ def load_model(model: Callable, path: str):
     """
     model.load_state_dict(torch.load(path, map_location=DEVICE))
     LOGGER.info(f"Model {str(model)} loaded successfully from {path}")
+
+
+def ff_transform(
+    audio: np.array,
+    fft_type: Literal["spectrogram", "mfcc"] = "mfcc",
+    fft_window: int = FFT_WINDOW,
+    hop_length: int = FFT_OVERLAP,
+    sample_rate: int = SAMPLE_RATE,
+    mel_channels: int = MEL_CHANNELS,
+) -> np.array:
+    """Transform from time domain to frequency domain
+
+    Args:
+        audio (np.array): Input numpy array
+
+    Returns:
+        np.array: Time Sequence of np.arrays
+    """
+
+    if fft_type == "spectrogram":
+        db = librosa.stft(y=audio, n_fft=fft_window, hop_length=hop_length)
+        S = librosa.amplitude_to_db(np.abs(db), ref=np.max)
+
+    elif fft_type == "mfcc":
+        power = librosa.feature.melspectrogram(
+            y=audio,
+            sr=sample_rate,
+            n_fft=fft_window,
+            hop_length=hop_length,
+            n_mels=mel_channels,
+        )
+        S = librosa.power_to_db(power, ref=np.max)
+
+    return S
 
 
 def log_spectrograms(sample_data: np.array, sample_rate: int):
@@ -261,19 +298,7 @@ def convert_kaggle_label(pred: str):
     Returns:
         _type_: _description_
     """
-    if pred in [
-        "yes",
-        "no",
-        "up",
-        "down",
-        "left",
-        "right",
-        "on",
-        "off",
-        "stop",
-        "go",
-        "silence",
-    ]:
+    if pred in KAGGLE_LABELS:
         return pred
     else:
         return "unknown"
