@@ -6,6 +6,8 @@ import torch.nn.functional as F
 
 
 class CTCModel(nn.Module):
+    """CTC Model"""
+
     def __init__(
         self,
         vocab_size: int,
@@ -35,7 +37,7 @@ class CTCModel(nn.Module):
 
         ## Blocks
         self.linear = nn.Linear(self.channels_no, self.input_size)
-        self.rnn = nn.LSTM(
+        self.rnn = nn.GRU(
             input_size=self.input_size,
             hidden_size=self.hidden_size,
             num_layers=2,
