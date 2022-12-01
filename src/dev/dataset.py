@@ -5,6 +5,7 @@ from typing import Callable, List, Literal, Optional, Sequence, Tuple, Union
 import librosa
 import numpy as np
 import torch
+import torch.nn.functional as F
 from torch.utils.data import Dataset
 
 import config
@@ -29,6 +30,7 @@ class SpeechDataset(Dataset):
         time_stretch: float = 0.1,
         random_shift: float = 0.2,
         white_noise_factor: float = 0.005,
+        sequence_output: bool = False,
     ):
         """SpeechDataset Module
 
@@ -51,6 +53,7 @@ class SpeechDataset(Dataset):
             time_stretch (float, optional): Time Stretch Augmentation. Defaults to 0.1.
             random_shift (float, optional): Random Shift Augmentation. Defaults to 0.2.
             white_noise_factor (float, optional): White Noise Augmentation. Defaults to 0.005.
+            sequence_output (bool, optional): If False, return single label index. If True, return sequence of character index. Default to False.
         """
 
         self.targets = targets
@@ -72,6 +75,7 @@ class SpeechDataset(Dataset):
         self.time_stretch = time_stretch
         self.white_noise_factor = white_noise_factor
         self.random_shift = random_shift
+        self.sequence_output = sequence_output
 
     def __len__(self):
         """
@@ -160,8 +164,27 @@ class SpeechDataset(Dataset):
         ## Convert 1D data into 2D data
         S = self.ff_transform(audio)
 
-        return (
-            torch.tensor(S)
-            if self.targets is None
-            else (torch.tensor(S), self.targets[item])
-        )
+        if self.sequence_output:
+            sequence = config.ID2SEQUENCE[self.targets[item]]
+            padded_sequence = F.pad(
+                torch.tensor(sequence, dtype=torch.int32),
+                pad=(0, config.CTC_MAX_OUT_LEN - len(sequence)),
+                value=-1,
+            )
+            return (
+                torch.tensor(S)
+                if self.targets is None
+                else (
+                    torch.tensor(S, dtype=torch.float32),
+                    padded_sequence,
+                    len(sequence),
+                    config.LABELS[self.targets[item]],
+                )
+            )
+
+        else:
+            return (
+                torch.tensor(S)
+                if self.targets is None
+                else (torch.tensor(S), self.targets[item])
+            )
