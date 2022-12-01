@@ -55,14 +55,8 @@ The following commands shall be ran **after activating the virtual environment**
    **Training Using CTCLoss**
 * How to setup output character dictionary
 * How to infer? Greedy Decode? Beam Search?
-* In cases where inference doesnt match, how to map close words to corresponding labels.
+* In cases where inference doesnt match, how to map close words to corresponding labels. (Use Edit Distance & Lexicon CTC Decoder)
+* How to handle silence token
 
-  **Other RNN Models**
-* RNN
-- Add Self-Attention. (Done!!!)
-- Add Gradient Clipping. (Done!!!)
-
-* Utime
-
-3. Create API & Use API to infer Predict dataset
-4. Streamlit Inference
+3. Generate Pickle file for Kaggle dataset
+4. Infer for Kaggle dataset
