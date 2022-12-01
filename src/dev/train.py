@@ -1,11 +1,17 @@
-"""Traing Script
+"""Training Script
 """
 import argparse
 
 import config
 from config import LOGGER
 from dev.dataloader import SpeechDataLoader
-from dev.engine import eval_classification, train_classification, train_translation
+from dev.engine import (
+    eval_classification,
+    eval_translation,
+    train_classification,
+    train_translation,
+)
+from dev.inference import BeamSearchCTCDecoder, GreedyCTCDecoder
 
 
 def get_argument_parser():
@@ -83,6 +89,14 @@ def get_argument_parser():
         default=False,
     )
 
+    parser.add_argument(
+        "-d",
+        "--decode",
+        help="Use BeamSearch or Greedy for CTC Decoding",
+        type=str,
+        default="greedy",
+    )
+
     args = parser.parse_args()
     return args
 
@@ -97,19 +111,19 @@ if __name__ == "__main__":
     early_stopping = args.earlystop
     patience = args.patience
     debug = args.debug
+    decode = args.decode
 
     model = config.MODEL_PARAMS[model_type]["instance"](
         **config.MODEL_PARAMS[model_type]["params"]
     )
 
-    data_manager = SpeechDataLoader(batch_size=batch_size)
-    data_manager.setup()
-    train_loader, val_loader = (
-        data_manager.train_loader(),
-        data_manager.validation_loader(),
-    )
-
     if config.MODEL_PARAMS[model_type]["type"] == "classification":
+        data_manager = SpeechDataLoader(batch_size=batch_size, debug_mode=debug)
+        data_manager.setup()
+        train_loader, val_loader = (
+            data_manager.train_loader(),
+            data_manager.validation_loader(),
+        )
         train_classification(
             model,
             train_loader,
@@ -122,12 +136,21 @@ if __name__ == "__main__":
             debug=debug,
         )
     elif config.MODEL_PARAMS[model_type]["type"] == "translation":
+        data_manager = SpeechDataLoader(
+            batch_size=batch_size, sequence_output=True, debug_mode=debug
+        )
+        data_manager.setup()
+        train_loader, val_loader = (
+            data_manager.train_loader(),
+            data_manager.validation_loader(),
+        )
         train_translation(
             model,
             train_loader,
             val_loader,
             epochs_no,
             learning_rate,
+            decode_type=decode,
             early_stopping=early_stopping,
             patience=patience,
             load=load_model,
@@ -136,7 +159,12 @@ if __name__ == "__main__":
 
     # Evaluate result on test dataset
     test_loader = data_manager.test_loader()
-    test_loss, test_acc, _, _ = eval_classification(model, test_loader)
+    if config.MODEL_PARAMS[model_type]["type"] == "classification":
+        test_loss, test_acc, _, _ = eval_classification(model, test_loader)
+    else:
+        decoder = GreedyCTCDecoder() if decode else BeamSearchCTCDecoder()
+        test_loss, test_acc = eval_translation(model, test_loader, decoder)
+
     LOGGER.info(
         f"Model {str(model)} - Test Loss = {test_loss}, Test Accuracy = {test_acc}"
     )
