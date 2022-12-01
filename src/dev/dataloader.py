@@ -28,6 +28,8 @@ class SpeechDataLoader(DataLoader):
         fft_overlap: int = config.FFT_OVERLAP,
         mel_channels: int = config.MEL_CHANNELS,
         load_pickle: bool = True,
+        sequence_output: bool = False,
+        debug_mode: bool = False,
     ):
         """Speech DataLoader.
 
@@ -45,6 +47,8 @@ class SpeechDataLoader(DataLoader):
             fft_overlap (int, optional): Window overlapping size for FFT. Defaults to config.FFT_OVERLAP.
             mel_channels (int, optional): No of MEL channels if "mfcc" is used for fft_type. Defaults to config.MEL_CHANNELS.
             load_pickle (bool, optional): If True, load data from pickle files. If False, DataLoader contains list of file paths to be read. Defaults to True.
+            sequence_output (bool, optional): If False, return single label index. If True, return sequence of character index. Default to False.
+            debug_mode (bool, optional): If False, use small debug pickle dataset. Default to False
         """
         self.labels = config.LABELS
         self.label2id = config.LABEL2ID
@@ -53,6 +57,7 @@ class SpeechDataLoader(DataLoader):
         self.num_classes = len(self.labels)
         self.load_pickle = load_pickle
         self.batch_size = batch_size
+        self.sequence_output = sequence_output
 
         if isinstance(data_dir, Path):
             self.data_dir = str(data_dir)
@@ -60,22 +65,40 @@ class SpeechDataLoader(DataLoader):
             self.data_dir = data_dir
 
         if self.load_pickle:
-            ### Load Pre-Loaded full dataset
-            self.data_dir = os.path.join(data_dir, "pickle")
-            LOGGER.info(f"Loading Pickle data files from {self.data_dir}")
+            if debug_mode:
+                self.data_dir = os.path.join(data_dir, "pickle")
+                LOGGER.info(f"Loading Pickle data files from {self.data_dir}")
+                with open(os.path.join(data_dir, "pickle", "debug.pkl"), "rb") as f:
+                    self.train_images, self.train_targets = pickle.load(f)
+                self.val_images, self.val_targets = (
+                    self.train_images,
+                    self.train_targets,
+                )
+                self.test_images, self.test_targets = (
+                    self.train_images,
+                    self.train_targets,
+                )
+                self.predict_images = self.train_images
 
-            ### Load pickle data ###
-            with open(os.path.join(data_dir, "pickle", "train.pkl"), "rb") as f:
-                self.train_images, self.train_targets = pickle.load(f)
-            with open(os.path.join(data_dir, "pickle", "validation.pkl"), "rb") as f:
-                self.val_images, self.val_targets = pickle.load(f)
-            with open(os.path.join(data_dir, "pickle", "test.pkl"), "rb") as f:
-                self.test_images, self.test_targets = pickle.load(f)
-            with open(os.path.join(data_dir, "pickle", "predict.pkl"), "rb") as f:
-                self.predict_images = pickle.load(f)
-            LOGGER.info("Finished Loading Pickle Data Files")
+            else:
+                ### Load Pre-Loaded full dataset
+                self.data_dir = os.path.join(data_dir, "pickle")
+                LOGGER.info(f"Loading Pickle data files from {self.data_dir}")
 
-            ### Convert labels to ids:
+                ### Load pickle data ###
+                with open(os.path.join(data_dir, "pickle", "train.pkl"), "rb") as f:
+                    self.train_images, self.train_targets = pickle.load(f)
+                with open(
+                    os.path.join(data_dir, "pickle", "validation.pkl"), "rb"
+                ) as f:
+                    self.val_images, self.val_targets = pickle.load(f)
+                with open(os.path.join(data_dir, "pickle", "test.pkl"), "rb") as f:
+                    self.test_images, self.test_targets = pickle.load(f)
+                with open(os.path.join(data_dir, "pickle", "predict.pkl"), "rb") as f:
+                    self.predict_images = pickle.load(f)
+                LOGGER.info("Finished Loading Pickle Data Files")
+
+                ### Convert labels to ids:
             self.train_targets = [self.label2id[label] for label in self.train_targets]
             self.val_targets = [self.label2id[label] for label in self.val_targets]
             self.test_targets = [self.label2id[label] for label in self.test_targets]
@@ -190,6 +213,7 @@ class SpeechDataLoader(DataLoader):
             fft_overlap=self.fft_overlap,
             mel_channels=self.mel_channels,
             augmentation=True,
+            sequence_output=self.sequence_output,
         )
 
         self.val_dataset = SpeechDataset(
@@ -205,6 +229,7 @@ class SpeechDataLoader(DataLoader):
             fft_overlap=self.fft_overlap,
             mel_channels=self.mel_channels,
             augmentation=False,
+            sequence_output=self.sequence_output,
         )
 
         self.test_dataset = SpeechDataset(
@@ -220,6 +245,7 @@ class SpeechDataLoader(DataLoader):
             fft_overlap=self.fft_overlap,
             mel_channels=self.mel_channels,
             augmentation=False,
+            sequence_output=self.sequence_output,
         )
 
         self.inference_dataset = SpeechDataset(
@@ -294,12 +320,12 @@ class SpeechDataLoader(DataLoader):
 
 
 if __name__ == "__main__":
-    dataloader = SpeechDataLoader()
+    dataloader = SpeechDataLoader(batch_size=3, sequence_output=True, debug_mode=True)
     dataloader.setup()
     train_loader = dataloader.train_loader()
     val_loader = dataloader.validation_loader()
     test_loader = dataloader.test_loader()
     predict_loader = dataloader.predict_loader()
 
-    inputs, targets = next(iter(train_loader))
-    print(inputs.size(), len(targets))
+    inputs, padded_sequence, seq_len, label = next(iter(train_loader))
+    print(inputs.size(), padded_sequence, seq_len, label)
