@@ -43,10 +43,13 @@ The following commands shall be ran **after activating the virtual environment**
 
 |**Model**|**Macro Avg Accuracy (Val)**|**Macro Avg Accuracy (Test)**|
 | :-------------: | :-----------------------: | :---------------: |
-|RNN (Classification)|To be updated|To be updated|
+|LSTM (Classification)|68.30%|67.32%|
+|GRU with Self-Attention (Classification)|80.00%|78.54%|
 |InceptionTime (Classification)|89.28%|88.07%|
-|UTime (Classification)|To be updated|To be updated|
 |LSTM (CTCLoss)|To be updated|To be updated|
+
+* Stop Training LSTM (Classification) model after 75 training epochs due to low computational resources. Model Val Loss is still improving at slow rate.
+* Other Models performance reported after 30 training epochs.
 
 ## To do List
 1. Kaggle inference: Only 12 classes (Convert some classes to Unknown)
