@@ -1,0 +1,30 @@
+yes	y e s |
+no	n o |
+up	u p |
+down	d o w n |
+left	l e f t |
+right	r i g h t |
+on	o n |
+off	o f f |
+stop	s t o p |
+go	g o |
+bed	b e d |
+bird	b i r d |
+cat	c a t |
+dog	d o g |
+eight	e i g h t |
+five	f i v e |
+four	f o u r |
+happy	h a p p y |
+house	h o u s e |
+marvin	m a r v i n |
+nine	n i n e |
+one	o n e |
+seven	s e v e n |
+sheila	s h e i l a |
+six	s i x |
+three	t h r e e |
+tree	t r e e |
+two	t w o |
+wow	w o w |
+zero	z e r o |

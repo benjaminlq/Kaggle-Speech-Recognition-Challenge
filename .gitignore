@@ -9,6 +9,10 @@ __pycache__/
 # Data
 data/
 
+# Artifacts
+*.pt
+*.log
+
 # Distribution / packaging
 .Python
 build/
