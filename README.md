@@ -33,8 +33,8 @@ The following commands shall be ran **after activating the virtual environment**
 ### Model Architecture
 #### Multiclass Classification
 * RNN
+* RNN With Self-Attention
 * Inception Time
-* U-Time
 
 #### Sequence Translation with CTCLoss
 * LSTM/RNN/GRU
@@ -46,20 +46,7 @@ The following commands shall be ran **after activating the virtual environment**
 |LSTM (Classification)|68.30%|67.32%|
 |GRU with Self-Attention (Classification)|80.00%|78.54%|
 |InceptionTime (Classification)|89.28%|88.07%|
-|LSTM (CTCLoss)|To be updated|To be updated|
+|GRU (CTCLoss)|To be updated|To be updated|
 
 * Stop Training LSTM (Classification) model after 75 training epochs due to low computational resources. Model Val Loss is still improving at slow rate.
 * Other Models performance reported after 30 training epochs.
-
-## To do List
-1. Kaggle inference: Only 12 classes (Convert some classes to Unknown)
-2. MODELS
-
-   **Training Using CTCLoss**
-* How to setup output character dictionary
-* How to infer? Greedy Decode? Beam Search?
-* In cases where inference doesnt match, how to map close words to corresponding labels. (Use Edit Distance & Lexicon CTC Decoder)
-* How to handle silence token
-
-3. Generate Pickle file for Kaggle dataset
-4. Infer for Kaggle dataset
