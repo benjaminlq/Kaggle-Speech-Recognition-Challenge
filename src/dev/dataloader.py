@@ -95,7 +95,7 @@ class SpeechDataLoader(DataLoader):
                 with open(os.path.join(data_dir, "pickle", "test.pkl"), "rb") as f:
                     self.test_images, self.test_targets = pickle.load(f)
                 with open(os.path.join(data_dir, "pickle", "predict.pkl"), "rb") as f:
-                    self.predict_images = pickle.load(f)
+                    self.predict_images, _ = pickle.load(f)
                 LOGGER.info("Finished Loading Pickle Data Files")
 
                 ### Convert labels to ids:
