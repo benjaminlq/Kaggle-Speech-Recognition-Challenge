@@ -283,22 +283,19 @@ def find_best_label(pred: str, labels: list = [""] + LABELS[1:]):
             best_label = label
             min_dist = dist
 
-    if best_label == "":
-        best_label = "silence"
-
-    return best_label
+    return "silence" if best_label == "" else best_label
 
 
 def convert_kaggle_label(pred: str):
-    """_summary_
+    """Convert Class Labels into Kaggle templates.
+    Kaggle Templates includes 12 classes:
+    "yes", "no", "up", "down", "left", "right", "on",
+    "off", "stop", "go", "silence", "unknown"
 
     Args:
-        pred (str): _description_
+        pred (str): model raw predicted label
 
     Returns:
-        _type_: _description_
+        str: kaggle formatted label
     """
-    if pred in KAGGLE_LABELS:
-        return pred
-    else:
-        return "unknown"
+    return pred if pred in KAGGLE_LABELS else "unknown"
