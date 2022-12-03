@@ -38,6 +38,9 @@ The following commands shall be ran **after activating the virtual environment**
 
 #### Sequence Translation with CTCLoss
 * LSTM/RNN/GRU
+* Use CTCLoss to classify tokens of characters, including a blank ("-") token and a silence token ("|")
+* Use GreedyDecoder and BeamSearchDecoder for converting sequence of tokens to character sequence
+* If sequence does not match provided label, use edit_distance to find the nearest candidate label.
 
 ## Results
 
